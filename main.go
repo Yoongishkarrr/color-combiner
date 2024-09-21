@@ -3,21 +3,40 @@ package main
 import (
     "encoding/json"
     "fmt"
+    "math"
     "net/http"
     "strconv"
-    "math"
 )
-	
+
 var colorDict = map[string]string{
-    "White":  "#FFFFFF",
-    "Black":  "#000000",
-    "Red":    "#FF0000",
-    "Green":  "#00FF00",
-    "Blue":   "#0000FF",
-    "Yellow": "#FFFF00",
+    "White":        "#FFFFFF",
+    "Black":        "#000000",
+    "Red":          "#FF0000",
+    "Green":        "#00FF00",
+    "Blue":         "#0000FF",
+    "Yellow":       "#FFFF00",
+    "Orange":       "#FFA500",
+    "Light Orange": "#FFB300",
+    "Dark Orange":  "#FF8C00",
+    "Coral":        "#FF7F50",
 }
 
-// hex в RGB
+func suggestSimilarColor(r, g, b int) string {
+    minDist := math.MaxFloat64
+    closestName := "No suggestion"
+
+    for name, hex := range colorDict {
+        r1, g1, b1 := hexToRGB(hex)
+        dist := math.Sqrt(float64((r-r1)*(r-r1) + (g-g1)*(g-g1) + (b-b1)*(b-b1)))
+        if dist < minDist {
+            minDist = dist
+            closestName = name
+        }
+    }
+
+    return closestName
+}
+
 func hexToRGB(hex string) (int, int, int) {
     r, _ := strconv.ParseInt(hex[1:3], 16, 8)
     g, _ := strconv.ParseInt(hex[3:5], 16, 8)
@@ -25,7 +44,6 @@ func hexToRGB(hex string) (int, int, int) {
     return int(r), int(g), int(b)
 }
 
-// RGB в hex
 func rgbToHex(r, g, b int) string {
     return fmt.Sprintf("#%02X%02X%02X", r, g, b)
 }
@@ -62,8 +80,12 @@ func combineHexColors(colors []string) (string, string) {
     bCombined := bSum / count
 
     combinedColor := rgbToHex(rCombined, gCombined, bCombined)
-
     colorName := closestColorName(rCombined, gCombined, bCombined)
+
+    // Если ближайший цвет не найден, возвращаем скомбинированный цвет
+    if colorName == "Unknown" {
+        colorName = combinedColor
+    }
 
     return combinedColor, colorName
 }
@@ -97,7 +119,6 @@ func combineColors(w http.ResponseWriter, r *http.Request) {
     }
 
     combinedColor, colorName := combineHexColors(colorReq.Colors)
-
     json.NewEncoder(w).Encode(map[string]string{"combinedColor": combinedColor, "colorName": colorName})
 }
 
